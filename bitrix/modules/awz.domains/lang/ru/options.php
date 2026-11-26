@@ -13,7 +13,8 @@ $MESS['AWZ_DOMAINS_OPT_VAL_YES'] = "Да";
 $MESS['AWZ_DOMAINS_OPT_VAL_NO'] = "Нет";
 $MESS['AWZ_DOMAINS_OPT_TAB_HELP'] = "Макросы и модификаторы";
 $MESS['AWZ_DOMAINS_OPT_SAVED'] = "Настройки сохранены";
-$MESS['AWZ_DOMAINS_OPT_IBM_CREATED'] = "Инфоблок городов успешно создан и привязан к сайту";$MESS['AWZ_DOMAINS_OPT_IBM_ERROR'] = "Не удалось создать инфоблок городов. Проверьте тип инфоблока.";
+$MESS['AWZ_DOMAINS_OPT_IBM_CREATED'] = "Инфоблок городов успешно создан и привязан к сайту";
+$MESS['AWZ_DOMAINS_OPT_IBM_ERROR'] = "Не удалось создать инфоблок городов. Проверьте тип инфоблока.";
 
 $MESS['AWZ_DOMAINS_OPT_ENABLED_TITLE'] = "Включен для сайта";
 $MESS['AWZ_DOMAINS_OPT_MODE_TITLE'] = "Способ определения города";
