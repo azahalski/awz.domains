@@ -1,0 +1,193 @@
+{
+  "schema_version": "1.0",
+  "module": {
+    "code": "awz.domains"
+  },
+  "current_state": {
+    "status": "needs_review",
+    "last_run_id": "awz.domains-1795686991",
+    "archive_sha256": null,
+    "open_findings": 3,
+    "blocking_findings_open": 0,
+    "false_positive_findings": 0,
+    "accepted_risk_findings": 0,
+    "fixed_findings": 0,
+    "removed_findings": 0,
+    "total_findings": 3
+  },
+  "runs": [
+    {
+      "run_id": "awz.domains-1795686991",
+      "created_at": "2026-11-26T09:57:03+00:00",
+      "archive_sha256": null,
+      "scanner_request_id": "awz.domains-1795686991",
+      "input_summary": "Обнаружено 3 уязвимости в 3 файлах при анализе 43 файлов модуля (55 target files recon). Максимальная severity: medium. Сигналы Path Traversal (lib/City.php include $targetFile, include/rewrite.php), RCE (Modifier.php call_user_func) и SSRF отклонены после трассировки: пути формируются из валидированных сегментов с проверкой в инфоблоке, реестр модификаторов закрыт.",
+      "summary": {
+        "current_scan_findings": 3,
+        "severity_counts": {
+          "medium": 1,
+          "low": 2
+        },
+        "new_findings": 3,
+        "still_open_findings": 0,
+        "reopened_findings": 0,
+        "resolved_since_previous_run": 0
+      }
+    }
+  ],
+  "findings": [
+    {
+      "journal_finding_id": "JF-00001",
+      "fingerprint": "cb1207db290360e59c3d5d883ed0a066",
+      "type": "Cross-Site Scripting",
+      "severity": "low",
+      "status": "open",
+      "first_seen_run_id": "awz.domains-1795686991",
+      "last_seen_run_id": "awz.domains-1795686991",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/access/include/moduleright.php",
+        "line": "229-240"
+      },
+      "current_location": {
+        "file": "lib/access/include/moduleright.php",
+        "line": "229-240"
+      },
+      "latest_vulnerability": {
+        "file": "lib/access/include/moduleright.php",
+        "line": "229-240",
+        "type": "Cross-Site Scripting",
+        "severity": "low",
+        "description": "Подтверждена stored XSS через встроенный `<script>` блок в include-файле админки. Строка 235: `CUtil::PhpToJSObject($arResult['USER_GROUPS'])` и строка 236: `CUtil::PhpToJSObject($arResult['ACCESS_RIGHTS'])`. Значения из `$arResult` (названия ролей из БД, метаданные участников) вставляются в JS-контекст без экранирования для JS. Строки 250 и 237 используют `<?= $openPopupEvent ?>` и `<?= $initPopupEvent ?>` — если эти переменные содержат неэкранированный управляющий символ (quote/semicolon), происходит прямой XSS при рендеринге. Данные текут по цепочке: `loadAction()` → `ComponentConfig::getUserGroups()` → DB read (`RoleTable`) → JS embedding.",
+        "recommendation": "Использовать `\\Bitrix\\Main\\Web\\Json::encode()` на все массивы перед подстановкой в `<script>` блок. Для строк в JS-контексте — `CUtil::JSEscape()` или `Json::encode()` вместо голого `<?= ?>`.",
+        "fix": "Before:\nwindow.awz_right_dialog.AccessRights.userGroups = <?= CUtil::PhpToJSObject($arResult['USER_GROUPS']) ?>;\n\nAfter:\n<?php\n$jsUserGroups = \\Bitrix\\Main\\Web\\Json::encode($arResult['USER_GROUPS']);\n$jsAccessRights = \\Bitrix\\Main\\Web\\Json::encode($arResult['ACCESS_RIGHTS']);\n?>\nwindow.awz_right_dialog.AccessRights.userGroups = <?= $jsUserGroups ?>;\nwindow.awz_right_dialog.AccessRights.accessRights = <?= $jsAccessRights ?>",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "low",
+          "changed": true,
+          "category": "stored-xss-trusted-editor-content",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "harden-output-escaping",
+          "confidence": "high",
+          "rationale": "Downgraded because the journal describes a stored XSS source controlled by a Bitrix admin/content editor or another trusted content-management role. In BUS such users can normally publish HTML/JS through legitimate site-management mechanisms, so this is template hardening rather than a high module vulnerability unless a low-privileged/external source is proven."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.domains-1795686991",
+          "event": "detected",
+          "at": "2026-11-26T09:57:03+00:00",
+          "location": {
+            "file": "lib/access/include/moduleright.php",
+            "line": "229-240"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00002",
+      "fingerprint": "24194e2a5dea0392fa836e51746ae0a6",
+      "type": "Cross-Site Scripting",
+      "severity": "low",
+      "status": "open",
+      "first_seen_run_id": "awz.domains-1795686991",
+      "last_seen_run_id": "awz.domains-1795686991",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "install/components/domains.config.permissions/ajax.php",
+        "line": "170-186"
+      },
+      "current_location": {
+        "file": "install/components/domains.config.permissions/ajax.php",
+        "line": "170-186"
+      },
+      "latest_vulnerability": {
+        "file": "install/components/domains.config.permissions/ajax.php",
+        "line": "170-186",
+        "type": "Cross-Site Scripting",
+        "severity": "low",
+        "description": "Подозрение: `prepareSettings()` фильтрует только `id` (как int) и `title` (кодировку), но пропускает массивы `accessRights` и `accessCodes` без валидации. Если перехватить AJAX-запрос и передать произвольные ключи в `accessRights` (например, нестандартные PERMISSION_ID), они попадут в `updatePermissions()`, `updateTitle()`, `updateRoleRelations()` напрямую. Severity low, так как обработчик требует Authentication + Csrf + ACCESS_RIGHT_EDIT привилегий.",
+        "recommendation": "Применить allowlist допустимых PERMISSION_ID и значений VALUE (0-3). Валидировать формат accessCodes перед проксированием.",
+        "fix": "private function prepareSettings(array $settings): array\n{\n    $settings['id'] = (int) $settings['id'];\n    $settings['title'] = \\Bitrix\\Main\\Text\\Encoding::convertEncodingToCurrent($settings['title']);\n\n    // Allowlist VALID_PERMISSION_IDs\n    $validPermissionIds = [96, 97, 98, 99];\n    $filteredRights = [];\n    foreach ($settings['accessRights'] ?? [] as $right)\n    {\n        $id = (int) $right['id'];\n        $value = (int) $right['value'];\n        if (in_array($id, $validPermissionIds) && in_array($value, [0, 1, 2, 3]))\n        {\n            $filteredRights[] = ['id' => $id, 'value' => $value];\n        }\n    }\n    $settings['accessRights'] = $filteredRights;\n\n    // Validate accessCodes format\n    if (!empty($settings['accessCodes']))\n    {\n        $settings['accessCodes'] = array_filter($settings['accessCodes'], function($code) {\n            return is_string($code) && preg_match('/^[\\w\\+]+:[\\w\\+]+$/', $code);\n        });\n    }\n\n    return $settings;\n}",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "xss-unclear-source",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "validate-source-and-fix-escaping",
+          "confidence": "low",
+          "rationale": "Adjusted conservatively because the journal does not clearly prove a low-privileged or public payload source. Confirm source permissions before treating as a blocker."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.domains-1795686991",
+          "event": "detected",
+          "at": "2026-11-26T09:57:03+00:00",
+          "location": {
+            "file": "install/components/domains.config.permissions/ajax.php",
+            "line": "170-186"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00003",
+      "fingerprint": "c78f1d7a8575279872b7d0cc332be453",
+      "type": "CSRF",
+      "severity": "medium",
+      "status": "open",
+      "first_seen_run_id": "awz.domains-1795686991",
+      "last_seen_run_id": "awz.domains-1795686991",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "options.php",
+        "line": "371-483"
+      },
+      "current_location": {
+        "file": "options.php",
+        "line": "371-483"
+      },
+      "latest_vulnerability": {
+        "file": "options.php",
+        "line": "371-483",
+        "type": "CSRF",
+        "severity": "medium",
+        "description": "Подозрение: CSRF на админ-странице настроек модуля. Форма сохранения настроек (строка 371, <form method=\"POST\">) не содержит скрытого поля bitrix_sessid(), и в коде нет вызова check_bitrix_sessid(). Атакующий с правами просмотра может заставить администратора сессии сохранить произвольные значения параметров модуля. Эксплуатация требует авторизации в админке и прав доступа к настройкам, что ограничивает круг атакующих.",
+        "recommendation": "Добавить <?=bitrix_sessid_post()?> внутрь формы и добавить проверку check_bitrix_sessid() до обработки POST-данных (перед строкой 63).",
+        "fix": "Before:\n<form method=\"POST\" action=\"<?=$saveUrl?>\" id=\"FORMACTION\">\n\nAfter:\n<?if(!check_bitrix_sessid()) die();?>\n<form method=\"POST\" action=\"<?=$saveUrl?>\" id=\"FORMACTION\">\n<?=bitrix_sessid_post()?>",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "medium",
+          "changed": true,
+          "category": "csrf-state-change",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "add-sessid-and-owner-checks",
+          "confidence": "medium",
+          "rationale": "Kept as medium because the finding describes state change without check_bitrix_sessid; raise only if cross-user deletion or higher-impact state change is confirmed."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.domains-1795686991",
+          "event": "detected",
+          "at": "2026-11-26T09:57:03+00:00",
+          "location": {
+            "file": "options.php",
+            "line": "371-483"
+          },
+          "status": "open"
+        }
+      ]
+    }
+  ]
+}

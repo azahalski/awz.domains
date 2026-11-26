@@ -1,0 +1,162 @@
+{
+  "success": true,
+  "requestId": "awz.domains-1795686991",
+  "data": {
+    "vulnerabilities": [
+      {
+        "file": "lib/access/include/moduleright.php",
+        "line": "229-240",
+        "type": "Cross-Site Scripting",
+        "severity": "low",
+        "description": "Подтверждена stored XSS через встроенный `<script>` блок в include-файле админки. Строка 235: `CUtil::PhpToJSObject($arResult['USER_GROUPS'])` и строка 236: `CUtil::PhpToJSObject($arResult['ACCESS_RIGHTS'])`. Значения из `$arResult` (названия ролей из БД, метаданные участников) вставляются в JS-контекст без экранирования для JS. Строки 250 и 237 используют `<?= $openPopupEvent ?>` и `<?= $initPopupEvent ?>` — если эти переменные содержат неэкранированный управляющий символ (quote/semicolon), происходит прямой XSS при рендеринге. Данные текут по цепочке: `loadAction()` → `ComponentConfig::getUserGroups()` → DB read (`RoleTable`) → JS embedding.",
+        "recommendation": "Использовать `\\Bitrix\\Main\\Web\\Json::encode()` на все массивы перед подстановкой в `<script>` блок. Для строк в JS-контексте — `CUtil::JSEscape()` или `Json::encode()` вместо голого `<?= ?>`.",
+        "fix": "Before:\nwindow.awz_right_dialog.AccessRights.userGroups = <?= CUtil::PhpToJSObject($arResult['USER_GROUPS']) ?>;\n\nAfter:\n<?php\n$jsUserGroups = \\Bitrix\\Main\\Web\\Json::encode($arResult['USER_GROUPS']);\n$jsAccessRights = \\Bitrix\\Main\\Web\\Json::encode($arResult['ACCESS_RIGHTS']);\n?>\nwindow.awz_right_dialog.AccessRights.userGroups = <?= $jsUserGroups ?>;\nwindow.awz_right_dialog.AccessRights.accessRights = <?= $jsAccessRights ?>",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "low",
+          "changed": true,
+          "category": "stored-xss-trusted-editor-content",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "harden-output-escaping",
+          "confidence": "high",
+          "rationale": "Downgraded because the journal describes a stored XSS source controlled by a Bitrix admin/content editor or another trusted content-management role. In BUS such users can normally publish HTML/JS through legitimate site-management mechanisms, so this is template hardening rather than a high module vulnerability unless a low-privileged/external source is proven."
+        }
+      },
+      {
+        "file": "install/components/domains.config.permissions/ajax.php",
+        "line": "170-186",
+        "type": "Cross-Site Scripting",
+        "severity": "low",
+        "description": "Подозрение: `prepareSettings()` фильтрует только `id` (как int) и `title` (кодировку), но пропускает массивы `accessRights` и `accessCodes` без валидации. Если перехватить AJAX-запрос и передать произвольные ключи в `accessRights` (например, нестандартные PERMISSION_ID), они попадут в `updatePermissions()`, `updateTitle()`, `updateRoleRelations()` напрямую. Severity low, так как обработчик требует Authentication + Csrf + ACCESS_RIGHT_EDIT привилегий.",
+        "recommendation": "Применить allowlist допустимых PERMISSION_ID и значений VALUE (0-3). Валидировать формат accessCodes перед проксированием.",
+        "fix": "private function prepareSettings(array $settings): array\n{\n    $settings['id'] = (int) $settings['id'];\n    $settings['title'] = \\Bitrix\\Main\\Text\\Encoding::convertEncodingToCurrent($settings['title']);\n\n    // Allowlist VALID_PERMISSION_IDs\n    $validPermissionIds = [96, 97, 98, 99];\n    $filteredRights = [];\n    foreach ($settings['accessRights'] ?? [] as $right)\n    {\n        $id = (int) $right['id'];\n        $value = (int) $right['value'];\n        if (in_array($id, $validPermissionIds) && in_array($value, [0, 1, 2, 3]))\n        {\n            $filteredRights[] = ['id' => $id, 'value' => $value];\n        }\n    }\n    $settings['accessRights'] = $filteredRights;\n\n    // Validate accessCodes format\n    if (!empty($settings['accessCodes']))\n    {\n        $settings['accessCodes'] = array_filter($settings['accessCodes'], function($code) {\n            return is_string($code) && preg_match('/^[\\w\\+]+:[\\w\\+]+$/', $code);\n        });\n    }\n\n    return $settings;\n}",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "xss-unclear-source",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "validate-source-and-fix-escaping",
+          "confidence": "low",
+          "rationale": "Adjusted conservatively because the journal does not clearly prove a low-privileged or public payload source. Confirm source permissions before treating as a blocker."
+        }
+      },
+      {
+        "file": "options.php",
+        "line": "371-483",
+        "type": "CSRF",
+        "severity": "medium",
+        "description": "Подозрение: CSRF на админ-странице настроек модуля. Форма сохранения настроек (строка 371, <form method=\"POST\">) не содержит скрытого поля bitrix_sessid(), и в коде нет вызова check_bitrix_sessid(). Атакующий с правами просмотра может заставить администратора сессии сохранить произвольные значения параметров модуля. Эксплуатация требует авторизации в админке и прав доступа к настройкам, что ограничивает круг атакующих.",
+        "recommendation": "Добавить <?=bitrix_sessid_post()?> внутрь формы и добавить проверку check_bitrix_sessid() до обработки POST-данных (перед строкой 63).",
+        "fix": "Before:\n<form method=\"POST\" action=\"<?=$saveUrl?>\" id=\"FORMACTION\">\n\nAfter:\n<?if(!check_bitrix_sessid()) die();?>\n<form method=\"POST\" action=\"<?=$saveUrl?>\" id=\"FORMACTION\">\n<?=bitrix_sessid_post()?>",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "medium",
+          "changed": true,
+          "category": "csrf-state-change",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "add-sessid-and-owner-checks",
+          "confidence": "medium",
+          "rationale": "Kept as medium because the finding describes state change without check_bitrix_sessid; raise only if cross-user deletion or higher-impact state change is confirmed."
+        }
+      }
+    ],
+    "summary": "Обнаружено 3 уязвимости в 3 файлах при анализе 43 файлов модуля (55 target files recon). Максимальная severity: medium. Сигналы Path Traversal (lib/City.php include $targetFile, include/rewrite.php), RCE (Modifier.php call_user_func) и SSRF отклонены после трассировки: пути формируются из валидированных сегментов с проверкой в инфоблоке, реестр модификаторов закрыт.",
+    "scannedFiles": 55,
+    "riskLevel": "medium",
+    "auditedFiles": [
+      "options.php",
+      "admin/menu.php",
+      "include/rewrite.php",
+      "include.php",
+      ".settings.php",
+      "install/index.php",
+      "install/solution.php",
+      "install/unstep.php",
+      "install/version.php",
+      "install/components/domains.config.permissions/ajax.php",
+      "lib/App.php",
+      "lib/City.php",
+      "lib/Helper.php",
+      "lib/Macros.php",
+      "lib/Modifier.php",
+      "lib/Manager.php",
+      "lib/access/accesscontroller.php",
+      "lib/access/handlers.php",
+      "lib/access/component/configpermissions.php",
+      "lib/access/custom/actiondictionary.php",
+      "lib/access/custom/componentconfig.php",
+      "lib/access/custom/helper.php",
+      "lib/access/custom/permissiondictionary.php",
+      "lib/access/custom/roledictionary.php",
+      "lib/access/custom/rules/example.php",
+      "lib/access/entity/user.php",
+      "lib/access/entityselectors/group.php",
+      "lib/access/entityselectors/user.php",
+      "lib/access/include/moduleright.php",
+      "lib/access/model/basemodel.php",
+      "lib/access/model/usermodel.php",
+      "lib/access/permission/actiondictionary.php",
+      "lib/access/permission/permissiondictionary.php",
+      "lib/access/permission/roledictionary.php",
+      "lib/access/permission/roleutil.php",
+      "lib/access/permission/rulefactory.php",
+      "lib/access/permission/rules/rightedit.php",
+      "lib/access/permission/rules/rightview.php",
+      "lib/access/permission/rules/settedit.php",
+      "lib/access/permission/rules/settview.php",
+      "lib/access/tables/permission.php",
+      "lib/access/tables/role.php",
+      "lib/access/tables/rolerelation.php"
+    ],
+    "reviewSummary": {
+      "reviewedAt": "2026-11-26",
+      "method": "BUS-aware triage: preserve original finding fields except severity, add reviewed node with old severity and rationale.",
+      "totals": {
+        "vulnerabilities": 3,
+        "changedSeverity": 2,
+        "unchangedSeverity": 1
+      },
+      "rawSeverityCounts": {
+        "medium": 1,
+        "low": 2
+      },
+      "reviewedSeverityCounts": {
+        "low": 2,
+        "medium": 1
+      },
+      "currentScope": {
+        "total": 3,
+        "rawSeverityCounts": {
+          "medium": 1,
+          "low": 2
+        },
+        "reviewedSeverityCounts": {
+          "low": 2,
+          "medium": 1
+        },
+        "reviewedCategories": {
+          "stored-xss-trusted-editor-content": 1,
+          "xss-unclear-source": 1,
+          "csrf-state-change": 1
+        }
+      },
+      "historicalUpdatePackages": {
+        "total": 0,
+        "rawSeverityCounts": {},
+        "reviewedSeverityCounts": {},
+        "reviewedCategories": {}
+      },
+      "caveats": [
+        "Type, file, line, description, recommendation and fix are preserved from the source journal.",
+        "Severity is replaced with reviewed triage severity."
+      ]
+    }
+  }
+}
