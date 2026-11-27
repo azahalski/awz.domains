@@ -8,7 +8,6 @@ use Bitrix\Main\Event;
 use Bitrix\Main\EventResult;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
-use Bitrix\Main\Web\Uri;
 
 Loc::loadMessages(__FILE__);
 
@@ -27,10 +26,6 @@ class City
     private $mainHost = '';
     /** @var array|null настройки сайта */
     private $settings = null;
-    /** @var string код города, извлеченный из URL до подмены */
-    private $preUrlCode = '';
-    /** @var bool подмена URL выполнена */
-    private $urlRewritten = false;
 
     public static function getInstance(): City
     {
@@ -79,9 +74,13 @@ class City
             }
         }
         if ($code === '' && in_array($this->settings['MODE'], ['url', 'both'], true)) {
-            $code = $this->preUrlCode !== ''
-                ? $this->preUrlCode
-                : $this->detectUrlCode($request->getRequestedPage());
+            // подмена уже выполнена в dbconn.php (include/rewrite.php) -
+            // путь без сегмента города, код передается в константе
+            if (defined('AWZ_D_CURRENT_CITY_CODE')) {
+                $code = strtolower(trim((string)constant('AWZ_D_CURRENT_CITY_CODE')));
+            } else {
+                $code = $this->detectUrlCode($request->getRequestedPage());
+            }
         }
 
         if ($code === '' && $this->settings['DEFAULT_CODE'] !== '') {
@@ -148,192 +147,6 @@ class City
     }
 
     /**
-     * Подмена фактического URL: сегмент города в начале пути
-     * (/msk/link/ -> /link/) вырезается до роутинга и urlrewrite.
-     * Вызывается из OnPageStart. Код города запоминается для init().
-     */
-    public function rewriteUrlFromRequest(): void
-    {
-        if ($this->urlRewritten) {
-            return;
-        }
-        $this->urlRewritten = true;
-
-        if (is_null($this->settings)) {
-            $this->settings = Helper::getSettings(Helper::getSiteId());
-        }
-
-        if (!$this->settings['ENABLED']
-            || !in_array($this->settings['MODE'], ['url', 'both'], true)) {
-            return;
-        }
-
-        $context = Context::getCurrent();
-        $request = $context->getRequest();
-        if ($request->isAdminSection()) {
-            return;
-        }
-
-        $path = parse_url($request->getRequestUri(), PHP_URL_PATH);
-        if (!is_string($path) || $path === '' || $path === '/') {
-            return;
-        }
-        $parts = explode('/', trim($path, '/'));
-        $code = strtolower(trim((string)reset($parts)));
-        if ($code === '' || !preg_match('~^[a-zA-Z0-9_\-]{1,64}$~', $code)) {
-            return;
-        }
-
-        // подменяем только если такой город реально есть в инфоблоке
-        if (is_null($this->loadCity($code))) {
-            return;
-        }
-
-        array_shift($parts);
-        $newPath = '/' . implode('/', $parts);
-        if ($newPath === '//' || trim($newPath, '/') === '') {
-            $newPath = '/';
-        }
-
-        // опция: подменять только URL, подходящие под регулярки (одна в строке);
-        // пустой список - подменяются все
-        $regexps = (array)($this->settings['URL_REWRITE_REGEXPS'] ?? []);
-        if (!empty($regexps)) {
-            $allowed = false;
-            foreach ($regexps as $regexp) {
-                if (@preg_match('~' . str_replace('~', '\~', trim($regexp)) . '~i', $path)) {
-                    $allowed = true;
-                    break;
-                }
-            }
-            if (!$allowed) {
-                return;
-            }
-        }
-
-        // обработчик для разработчиков: разрешить/запретить подмену, подменить код города
-        $event = new Event(Helper::MODULE_ID, 'onCheckRewriteCityUrl', [
-            'siteId' => $this->settings['SITE_ID'],
-            'code' => $code,
-            'path' => $path,
-            'newPath' => $newPath,
-        ]);
-        $event->send();
-        foreach ($event->getResults() as $result) {
-            if ($result->getType() == EventResult::SUCCESS) {
-                $params = $result->getParameters();
-                if (is_array($params)) {
-                    if (array_key_exists('rewrite', $params) && $params['rewrite'] !== true) {
-                        return;
-                    }
-                    if (isset($params['code']) && is_string($params['code']) && $params['code'] !== '') {
-                        $code = strtolower(trim($params['code']));
-                    }
-                }
-            }
-        }
-
-        $hasTrailingSlash = substr($newPath, -1) === '/';
-        array_shift($parts);
-        $newPath = '/' . implode('/', $parts);
-        if ($newPath !== '/' && $hasTrailingSlash) {
-            $newPath .= '/';
-        }
-
-        $uri = new Uri($request->getRequestUri());
-        $uri->setPath($newPath);
-        $newRequestUri = $uri->getUri();
-
-        // суперглобальные для старого ядра и urlrewrite
-        $_SERVER['REQUEST_URI'] = $newRequestUri;
-        $_SERVER['SCRIPT_URL'] = $newPath;
-
-        // новое ядро: пересобираем Request и переинициализируем контекст
-        $server = $context->getServer();
-        $serverArray = $server->toArray();
-        $serverArray['REQUEST_URI'] = $newRequestUri;
-        $server->set($serverArray);
-
-
-
-        $newRequest = new \Bitrix\Main\HttpRequest(
-            $server,
-            $request->getQueryList()->toArray(),
-            $request->getPostList()->toArray(),
-            $request->getFileList()->toArray(),
-            $request->getCookieList()->toArray()
-        );
-        if ($request instanceof \Psr\Http\Message\RequestInterface && method_exists($newRequest, 'withUri')) {
-            $newRequest = $newRequest->withUri($uri);
-        }
-        $context->initialize(
-            $newRequest,
-            $context->getResponse(),
-            $server,
-            ['env' => $context->getEnvironment()]
-        );
-
-        $this->preUrlCode = $code;
-
-        // 1. Проверяем, не открыт ли уже целевой файл
-        $documentRoot = rtrim($_SERVER['DOCUMENT_ROOT'], '/');
-        $targetFile = null;
-
-        if (substr($newPath, -1) === '/') {
-            if (is_file($documentRoot . $newPath . 'index.php')) {
-                $targetFile = $documentRoot . $newPath . 'index.php';
-            }
-        } elseif (is_file($documentRoot . $newPath)) {
-            $targetFile = $documentRoot . $newPath;
-        } elseif (is_file($documentRoot . $newPath . '/index.php')) {
-            $targetFile = $documentRoot . $newPath . '/index.php';
-        }
-
-// 2. Если мы сейчас внутри urlrewrite.php (или 404) и целевой физический файл существует — подключаем его!
-        if ($targetFile !== null && realpath($_SERVER['SCRIPT_FILENAME']) !== realpath($targetFile)) {
-            // Сбрасываем статус 404, если веб-сервер/битрикс его уже выставил
-            \CHTTP::SetStatus('200 OK');
-            if (!defined('ERROR_404')) {
-                // Не определяем ERROR_404
-            }
-
-            $_SERVER['SCRIPT_FILENAME'] = $targetFile;
-            $_SERVER['SCRIPT_NAME'] = str_replace($documentRoot, '', $targetFile);
-            $_SERVER['PHP_SELF'] = $_SERVER['SCRIPT_NAME'];
-
-            // Переинициализируем Request ещё раз, чтобы SCRIPT_NAME обновился
-            $server = $context->getServer();
-            $serverArray = $server->toArray();
-            $serverArray['SCRIPT_FILENAME'] = $_SERVER['SCRIPT_FILENAME'];
-            $serverArray['SCRIPT_NAME'] = $_SERVER['SCRIPT_NAME'];
-            $serverArray['PHP_SELF'] = $_SERVER['PHP_SELF'];
-            $server->set($serverArray);
-
-            $newRequest = new \Bitrix\Main\HttpRequest(
-                $server,
-                $request->getQueryList()->toArray(),
-                $request->getPostList()->toArray(),
-                $request->getFileList()->toArray(),
-                $request->getCookieList()->toArray()
-            );
-            if ($request instanceof \Psr\Http\Message\RequestInterface && method_exists($newRequest, 'withUri')) {
-                $newRequest = $newRequest->withUri($uri);
-            }
-            $context->initialize(
-                $newRequest,
-                $context->getResponse(),
-                $server,
-                ['env' => $context->getEnvironment()]
-            );
-
-            // Подключаем реальный файл страницы и завершаем работу urlrewrite.php
-            include $targetFile;
-            die();
-        }
-
-    }
-
-    /**
      * Код города из поддомена. Поддержка многодоменности:
      * основной хост — список доменов, поддомен ищется относительно каждого.
      * @return array [subDomain, found, matchedHost]
@@ -381,7 +194,7 @@ class City
     {
         $settings = $this->settings;
         $cacheId = md5(
-            'city|' . $settings['SITE_ID'] . '|' . $settings['IBLOCK_ID'] . '|'
+            'city2|' . $settings['SITE_ID'] . '|' . $settings['IBLOCK_ID'] . '|'
             . implode(',', $settings['PROPS']) . '|' . $code
         );
         $cacheDir = '/awz_domains/' . $settings['SITE_ID'] . '_' . $settings['IBLOCK_ID'];
@@ -393,7 +206,8 @@ class City
         if ($obCache->startDataCache()) {
             $data = null;
             if (Loader::includeModule('iblock')) {
-                $select = array_merge(['ID', 'NAME', 'IBLOCK_ID', 'CODE'], $settings['PROPS']);
+                $select = array_merge(['ID', 'NAME', 'IBLOCK_ID', 'CODE'],
+                    array_map(static fn($p) => 'PROPERTY_' . $p, $settings['PROPS']));
                 $dbRes = \CIBlockElement::GetList(
                     [],
                     [
@@ -412,14 +226,44 @@ class City
                         'CODE' => (string)$row['CODE'],
                         'IBLOCK_ID' => (int)$row['IBLOCK_ID'],
                     ];
-                    foreach ($settings['PROPS'] as $p) {
-                        $val = isset($row['PROPERTY_' . $p . '_VALUE']) ? $row['PROPERTY_' . $p . '_VALUE'] : '';
-                        if (is_array($val)) {
-                            $val = implode(', ', $val);
+
+                    // все свойства элемента одним запросом (регистр кода не важен)
+                    $propsMap = [];
+                    $descMap = [];
+                    $dbProps = \CIBlockElement::GetProperty(
+                        (int)$row['IBLOCK_ID'],
+                        (int)$row['ID'],
+                        'sort',
+                        'asc'
+                    );
+                    while ($prop = $dbProps->Fetch()) {
+                        $pCode = strtoupper(trim((string)($prop['CODE'] ?? '')));
+                        if ($pCode === '') {
+                            continue;
                         }
-                        $data[$p] = (string)$val;
-                        if (isset($row['PROPERTY_' . $p . '_DESCRIPTION'])) {
-                            $data[$p . '_DESCR'] = (string)$row['PROPERTY_' . $p . '_DESCRIPTION'];
+                        $pv = $prop['VALUE'] ?? '';
+                        if (is_array($pv)) {
+                            $pv = implode(', ', $pv);
+                        }
+                        $pv = (string)$pv;
+                        if ($pv === '') {
+                            continue;
+                        }
+                        if (isset($propsMap[$pCode])) {
+                            $propsMap[$pCode] .= ', ' . $pv;
+                        } else {
+                            $propsMap[$pCode] = $pv;
+                        }
+                        if (!empty($prop['DESCRIPTION'])) {
+                            $descMap[$pCode] = (string)$prop['DESCRIPTION'];
+                        }
+                    }
+
+                    foreach ($settings['PROPS'] as $p) {
+                        $key = strtoupper(trim($p));
+                        $data[$p] = $propsMap[$key] ?? '';
+                        if (isset($descMap[$key])) {
+                            $data[$p . '_DESCR'] = $descMap[$key];
                         }
                     }
                 }

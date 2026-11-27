@@ -21,28 +21,29 @@ class Modifier
         }
 
         $cache = [
-            'default' => [static fn($v, $p) => self::isBlank($v) ? $p : $v, true],
-            'def' => [static fn($v, $p) => self::isBlank($v) ? $p : $v, true],
-            'upper' => [static fn($v) => mb_strtoupper($v), false],
-            'lower' => [static fn($v) => mb_strtolower($v), false],
-            'ucfirst' => [static fn($v) => mb_strlen($v) > 1
+            'DEFAULT' => [static fn($v, $p) => self::isBlank($v) ? $p : $v, true],
+            'DEF' => [static fn($v, $p) => self::isBlank($v) ? $p : $v, true],
+            'UPPER' => [static fn($v) => mb_strtoupper($v), false],
+            'LOWER' => [static fn($v) => mb_strtolower($v), false],
+            'UCFIRST' => [static fn($v) => mb_strlen($v) > 1
                 ? mb_strtoupper(mb_substr($v, 0, 1)) . mb_substr($v, 1) : mb_strtoupper($v), false],
-            'lcfirst' => [static fn($v) => mb_strlen($v) > 1
+            'LCFIRST' => [static fn($v) => mb_strlen($v) > 1
                 ? mb_strtolower(mb_substr($v, 0, 1)) . mb_substr($v, 1) : mb_strtolower($v), false],
-            'trim' => [static fn($v) => trim($v), false],
-            'translit' => [static fn($v) => self::translit($v), false],
-            'phone' => [static fn($v) => self::phone($v), false],
-            'tel' => [static fn($v) => self::tel($v), false],
-            'plural' => [static fn($v, $p) => self::plural($v, $p), true],
-            'truncate' => [static fn($v, $p) => self::truncate($v, $p), true],
-            'date' => [static fn($v, $p) => self::dateFormat($v, $p), true],
-            'number' => [static fn($v, $p) => self::number($v, $p), true],
-            'replace' => [static fn($v, $p) => self::replace($v, $p), true],
-            'wrap' => [static fn($v, $p) => self::wrap($v, $p), true],
-            'part' => [static fn($v, $p) => self::part($v, $p), true],
-            'html' => [static fn($v) => htmlspecialcharsbx($v), false],
-            'urlencode' => [static fn($v) => rawurlencode($v), false],
-            'sep' => [static fn($v, $p) => $v, true],
+            'TRIM' => [static fn($v) => trim($v), false],
+            'TRANSLIT' => [static fn($v) => self::translit($v), false],
+            'PHONE' => [static fn($v) => self::phone($v), false],
+            'TEL' => [static fn($v) => self::tel($v), false],
+            'PLURAL' => [static fn($v, $p) => self::plural($v, $p), true],
+            'TRUNCATE' => [static fn($v, $p) => self::truncate($v, $p), true],
+            'DATE' => [static fn($v, $p) => self::dateFormat($v, $p), true],
+            'NUMBER' => [static fn($v, $p) => self::number($v, $p), true],
+            'REPLACE' => [static fn($v, $p) => self::replace($v, $p), true],
+            'WRAP' => [static fn($v, $p) => self::wrap($v, $p), true],
+            'PART' => [static fn($v, $p) => self::part($v, $p), true],
+            'HTML' => [static fn($v) => htmlspecialcharsbx($v), false],
+            'URLCODE' => [static fn($v) => rawurlencode($v), false],
+            'URLENCODE' => [static fn($v) => rawurlencode($v), false],
+            'SEP' => [static fn($v, $p) => $v, true],
         ];
 
         $event = new Event(Helper::MODULE_ID, 'onCollectModifiers');

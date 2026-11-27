@@ -56,11 +56,12 @@ class Macros
         if (mb_strpos($str, '#AWZ_S_') === false) {
             return $str;
         }
+
         $values = self::getValues($siteId);
         $values = self::normalizeKeys($values);
 
-        return preg_replace_callback(
-            '~#AWZ_S_([A-Za-z0-9_]+)((?:~[^#~]*)*)#~u',
+        $res = preg_replace_callback(
+            '@#AWZ_S_([A-Za-z0-9_\-]+)((?:~[^#~]*)*)#@',
             static function ($m) use ($values) {
                 $key = strtoupper($m[1]);
                 $mods = [];
@@ -77,10 +78,21 @@ class Macros
                         return Modifier::apply('', $mods);
                     }
                 }
+
                 return '';
             },
             $str
         );
+
+        if (!is_string($res)) {
+            // ошибка PCRE (лимит backtracking и т.п.) - возвращаем как есть
+            return $str;
+        }
+
+        // зачистка пустых макросов: не найденные значения убираем целиком
+        $res = preg_replace('@#AWZ_S_[A-Za-z0-9_\-]+(?:~[^#~]*)*@', '', $res);
+
+        return is_string($res) ? $res : $str;
     }
 
     private static function normalizeKeys(array $values): array

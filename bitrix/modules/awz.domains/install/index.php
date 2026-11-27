@@ -137,10 +137,6 @@ class awz_domains extends CModule
             $this->MODULE_ID, '\\Awz\\Domains\\App', 'onAfterIblockElementDelete'
         );
         $eventManager->registerEventHandlerCompatible(
-            'main', 'OnPageStart',
-            $this->MODULE_ID, '\\Awz\\Domains\\App', 'onPageStart'
-        );
-        $eventManager->registerEventHandlerCompatible(
             'main', 'OnProlog',
             $this->MODULE_ID, '\\Awz\\Domains\\App', 'onProlog'
         );
@@ -165,10 +161,6 @@ class awz_domains extends CModule
         $eventManager->unRegisterEventHandler(
             'main', 'OnAfterUserAdd',
             $this->MODULE_ID, '\\Awz\\Domains\\Access\\Handlers', 'OnAfterUserUpdate'
-        );
-        $eventManager->unRegisterEventHandler(
-            'main', 'OnPageStart',
-            $this->MODULE_ID, '\\Awz\\Domains\\App', 'onPageStart'
         );
         $eventManager->unRegisterEventHandler(
             'main', 'OnProlog',

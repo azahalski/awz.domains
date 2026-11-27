@@ -59,41 +59,103 @@ class Helper
 
     /**
      * Записывает конфиг городов для ранней подмены URL из dbconn.php
-     * (include/rewrite.php не использует ядро и читает только этот файл)
+     * (include/rewrite.php не использует ядро и читает только этот файл).
+     * Учет многосайтовости: данные по сайтам с привязкой к доменам,
+     * сайт без домена (или общая настройка) - fallback.
      */
     public static function writeUrlIncludeConfig(): void
     {
-        $cities = [];
-        $default = '';
+        $common = ['hosts' => [], 'cities' => [], 'default' => '', 'regexps' => []];
+        $sites = [];
+
         if (Loader::includeModule('iblock')) {
-            foreach (self::getAllSites() as $siteId) {
-                $settings = self::getSettings($siteId);
-                if (empty($settings['ENABLED']) || $settings['IBLOCK_ID'] <= 0) {
+            // домены сайтов - из b_lang_domain (SiteDomainTable)
+            $domainsBySite = [];
+            try {
+                $dbDomains = \Bitrix\Main\SiteDomainTable::getList([
+                    'select' => ['LID', 'DOMAIN'],
+                ]);
+                while ($row = $dbDomains->fetch()) {
+                    $domainsBySite[$row['LID']][] = $row['DOMAIN'];
+                }
+            } catch (\Throwable $e) {
+                $domainsBySite = [];
+            }
+
+            $dbSites = \Bitrix\Main\SiteTable::getList(['select' => ['LID', 'SERVER_NAME']]);
+            while ($site = $dbSites->fetch()) {
+                $settings = self::getSettings($site['LID']);
+                if (empty($settings['ENABLED'])) {
                     continue;
                 }
-                if ($default === '' && $settings['DEFAULT_CODE'] !== '') {
-                    $default = $settings['DEFAULT_CODE'];
+                $hosts = [];
+                foreach ((array)($domainsBySite[$site['LID']] ?? []) as $domain) {
+                    $domain = strtolower(trim((string)$domain));
+                    if ($domain !== '') {
+                        $hosts[] = $domain;
+                        $hosts[] = 'www.' . $domain;
+                    }
                 }
-                $dbRes = \CIBlockElement::GetList(
-                    [],
-                    [
-                        'IBLOCK_ID' => $settings['IBLOCK_ID'],
-                        'ACTIVE' => 'Y',
-                        'CHECK_PERMISSIONS' => 'N',
-                    ],
-                    false,
-                    false,
-                    ['CODE']
-                );
-                while ($row = $dbRes->Fetch()) {
-                    $code = strtolower(trim((string)$row['CODE']));
-                    if ($code !== '' && !in_array($code, $cities, true)) {
-                        $cities[] = $code;
+                // имя сервера из настроек сайта (может быть список через запятую)
+                foreach (preg_split('~[\s,;]+~u', (string)($site['SERVER_NAME'] ?? '')) as $sn) {
+                    $sn = strtolower(trim((string)$sn));
+                    if ($sn !== '' && !in_array($sn, $hosts, true)) {
+                        $hosts[] = $sn;
+                        $hosts[] = 'www.' . $sn;
+                    }
+                }
+                $cities = [];
+                if ($settings['IBLOCK_ID'] > 0) {
+                    $dbRes = \CIBlockElement::GetList(
+                        [],
+                        [
+                            'IBLOCK_ID' => $settings['IBLOCK_ID'],
+                            'ACTIVE' => 'Y',
+                            'CHECK_PERMISSIONS' => 'N',
+                        ],
+                        false,
+                        false,
+                        ['CODE']
+                    );
+                    while ($row = $dbRes->Fetch()) {
+                        $code = strtolower(trim((string)$row['CODE']));
+                        if ($code !== '' && !in_array($code, $cities, true)) {
+                            $cities[] = $code;
+                        }
+                    }
+                }
+                $entry = [
+                    'hosts' => $hosts,
+                    'cities' => $cities,
+                    'default' => $settings['DEFAULT_CODE'] !== '' ? $settings['DEFAULT_CODE'] : '',
+                    'regexps' => array_values((array)($settings['URL_REWRITE_REGEXPS'] ?? [])),
+                ];
+                if (!empty($hosts)) {
+                    $sites[] = $entry;
+                } else {
+                    // сайт без домена - fallback
+                    if (empty($common['cities'])) {
+                        $common = $entry;
+                    } else {
+                        foreach ($entry['cities'] as $c) {
+                            if (!in_array($c, $common['cities'], true)) {
+                                $common['cities'][] = $c;
+                            }
+                        }
+                        if ($common['default'] === '' && $entry['default'] !== '') {
+                            $common['default'] = $entry['default'];
+                        }
+                        foreach ($entry['regexps'] as $r) {
+                            if (!in_array($r, $common['regexps'], true)) {
+                                $common['regexps'][] = $r;
+                            }
+                        }
                     }
                 }
             }
         }
-        $config = ['cities' => $cities, 'default' => $default];
+
+        $config = ['sites' => $sites, 'common' => $common];
         $root = defined('DOCUMENT_ROOT') ? DOCUMENT_ROOT
             : (isset($_SERVER['DOCUMENT_ROOT']) ? $_SERVER['DOCUMENT_ROOT'] : '');
         if ($root === '') {
@@ -148,7 +210,9 @@ class Helper
         if ($siteId === '') {
             return (string)Option::get(self::MODULE_ID, $code, '', '');
         }
-        return (string)Option::get(self::MODULE_ID, $code, '', $siteId);
+        // getRealValue - только значение сайта, без фолбэка на общую настройку
+        $val = Option::getRealValue(self::MODULE_ID, $code, $siteId);
+        return (string)($val ?? '');
     }
 
     /**

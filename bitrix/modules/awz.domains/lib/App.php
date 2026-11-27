@@ -10,22 +10,6 @@ class App
     private static $inited = false;
 
     /**
-     * OnPageStart: подмена URL при городе в сегменте пути
-     * (до urlrewrite и роутинга)
-     */
-    public static function onPageStart(): void
-    {
-        if (!Loader::includeModule(Helper::MODULE_ID)) {
-            return;
-        }
-        $request = Application::getInstance()->getContext()->getRequest();
-        if ($request->isAdminSection()) {
-            return;
-        }
-        City::getInstance()->rewriteUrlFromRequest();
-    }
-
-    /**
      * OnAfterIBlockElementAdd: сброс кеша + обновление dbcon-конфига городов
      */
     public static function onAfterIblockElementAdd($arFields): void
@@ -116,6 +100,7 @@ class App
      */
     public static function onEndBufferContent(&$content): void
     {
+
         if (!is_string($content)) {
             return;
         }

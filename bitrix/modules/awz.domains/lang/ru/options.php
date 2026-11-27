@@ -13,8 +13,7 @@ $MESS['AWZ_DOMAINS_OPT_VAL_YES'] = "Да";
 $MESS['AWZ_DOMAINS_OPT_VAL_NO'] = "Нет";
 $MESS['AWZ_DOMAINS_OPT_TAB_HELP'] = "Макросы и модификаторы";
 $MESS['AWZ_DOMAINS_OPT_SAVED'] = "Настройки сохранены";
-$MESS['AWZ_DOMAINS_OPT_IBM_CREATED'] = "Инфоблок городов успешно создан и привязан к сайту";
-$MESS['AWZ_DOMAINS_OPT_IBM_ERROR'] = "Не удалось создать инфоблок городов. Проверьте тип инфоблока.";
+$MESS['AWZ_DOMAINS_OPT_IBM_CREATED'] = "Инфоблок городов успешно создан и привязан к сайту";$MESS['AWZ_DOMAINS_OPT_IBM_ERROR'] = "Не удалось создать инфоблок городов. Проверьте тип инфоблока.";
 
 $MESS['AWZ_DOMAINS_OPT_ENABLED_TITLE'] = "Включен для сайта";
 $MESS['AWZ_DOMAINS_OPT_MODE_TITLE'] = "Способ определения города";
@@ -64,4 +63,4 @@ $MESS['AWZ_DOMAINS_OPT_H_PLURAL'] = "Склонение числа: 2 товар
 $MESS['AWZ_DOMAINS_OPT_H_MODS_LIST'] = "Модификаторы (через ~, можно цепочкой): default:значение, upper, lower, ucfirst, lcfirst, trim, translit, phone, tel, plural:а|б|в, truncate:N, date:формат, number:N, replace:что|начто, wrap:до|после, part:N|разделитель, html, urlencode, sep:разделитель";
 $MESS['AWZ_DOMAINS_OPT_H_EVENTS_T'] = "События для разработчиков";
 $MESS['AWZ_DOMAINS_OPT_H_MACROS_T'] = "Макросы и модификаторы";
-$MESS['AWZ_DOMAINS_OPT_H_EVENTS'] = "События для разработчиков: onCollectMacros (свои макросы, приоритетнее системных), onCollectDefaultCode (код города по умолчанию), onCheckRewriteCityUrl (проверка подмены URL), onCollectModifiers (свои модификаторы).";
+$MESS['AWZ_DOMAINS_OPT_H_EVENTS'] = "События для разработчиков: onCollectMacros (свои макросы, приоритетнее системных), onCollectDefaultCode (код города по умолчанию), onCollectModifiers (свои модификаторы).";
