@@ -1,0 +1,38 @@
+{
+ "module_code": "awz.domains",
+ "files": [
+  {
+   "name": "icon.png",
+   "sha256": "1db51a638b5f876cabc27fbc13c543b5d6b6b5330887cf9821d1c49ecf1617de",
+   "bytes": 2897,
+   "url": "https://hermes.zahalski.dev/img/icon-awz.domains--20261127-032620-6d4673.png",
+   "width": 135,
+   "height": 135
+  },
+  {
+   "name": "icon_256.png",
+   "sha256": "0cdda3e678e12d3c3f71ec22a2036d4b41120c208c8c2165cfc1b0d6f28901f0",
+   "bytes": 5542,
+   "url": "https://hermes.zahalski.dev/img/icon-awz.domains--20261127-032620-c283a2.png",
+   "width": 256,
+   "height": 256
+  },
+  {
+   "name": "icon_512.png",
+   "sha256": "607b81b1a37fab003b0226a266d0bd9f900ca8bf6f591c9d14f64d16c73a9374",
+   "bytes": 11363,
+   "url": "https://hermes.zahalski.dev/img/icon-awz.domains--20261127-032621-d9bd5a.png",
+   "width": 512,
+   "height": 512
+  },
+  {
+   "name": "icon.svg",
+   "sha256": "059705bac753f010a8b5a8910a181c452865cca053713f82f2e6c0429011e45c",
+   "bytes": 670,
+   "url": "https://hermes.zahalski.dev/img/icon-awz.domains--20261127-032621-e98019.svg",
+   "width": 512,
+   "height": 512
+  }
+ ],
+ "notes": "v2 set (тот же, что на маркете; 135 sha 1db51a638b5f876c...; measure STYLE OK: 76.3x45.2, cov 15.3, contrast 3.61)"
+}

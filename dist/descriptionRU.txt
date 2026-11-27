@@ -1,0 +1,33 @@
+[center][size=18pt][b]AWZ: Региональность[/b][/size]
+[IMG WIDTH=225 HEIGHT=9]https://zahalski.dev/upload/awz.load.ai/lv1iyow5dj.png[/IMG][/center]
+[center]
+[TABLE][TR][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/4zhdkguvu3.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/5bgfxic7b1.png[/IMG][/TH][TH][b]Региональная структура сайта на доменах и поддоменах: для каждого региона - свои контакты, цены и тексты, а текущий регион определяется автоматически по адресу сайта.[/b][/TH][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/4zhdkguvu3.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/5bgfxic7b1.png[/IMG][/TH][/TR][TR][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/4zhdkguvu3.png[/IMG][/TH][/TR][TR][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/4zhdkguvu3.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/5bgfxic7b1.png[/IMG][/TH][TH][color=#8b93b3]Один сайт обслуживает все регионы: не нужно клонировать копии портала под каждый город или область.[/color][/TH][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/4zhdkguvu3.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/5bgfxic7b1.png[/IMG][/TH][/TR][/TABLE][/center]
+[center]
+[TABLE][TR][TH][center][IMG WIDTH=72 HEIGHT=72]https://zahalski.dev/upload/awz.load.ai/yxjc6rau1o.png[/IMG][/center]
+
+[center][b]Домены и поддомены[/b][/center][color=#8b93b3]регион привязывается к адресу сайта: поддомен или отдельный домен.[/color][/TH][TH][center][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/4zhdkguvu3.png[/IMG][/center][/TH][TH][center][IMG WIDTH=72 HEIGHT=72]https://zahalski.dev/upload/awz.load.ai/9mdljctue6.png[/IMG][/center]
+
+[center][b]Региональные данные[/b][/center][color=#8b93b3]контакты, адреса и тексты подставляются по текущему региону посетителя.[/color][/TH][TH][center][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/4zhdkguvu3.png[/IMG][/center][/TH][TH][center][IMG WIDTH=72 HEIGHT=72]https://zahalski.dev/upload/awz.load.ai/annzau80ud.png[/IMG][/center]
+
+[center][b]SEO по регионам[/b][/center][color=#8b93b3]свои title и description у страниц каждого региона - без дублей между городами.[/color][/TH][/TR][/TABLE]
+[/center]
+
+[center][size=18pt][b]Как работает[/b][/size]
+[IMG WIDTH=225 HEIGHT=9]https://zahalski.dev/upload/awz.load.ai/lv1iyow5dj.png[/IMG][/center]
+[center]
+[TABLE]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/ierih45i2x.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/4zhdkguvu3.png[/IMG][/TD][TD]По адресу страницы (домен или поддомен) модуль определяет текущий регион посетителя[/TD][/TR]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/fkhr6dq4yh.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/4zhdkguvu3.png[/IMG][/TD][TD]Список регионов ведётся в админке: домен, название, контакты и SEO-поля - всё в одном месте[/TD][/TR]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/4pnzhtmv18.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/4zhdkguvu3.png[/IMG][/TD][TD]Региональные данные выводятся в шаблонах через API модуля - править ядро и вёрстку не нужно[/TD][/TR]
+[/TABLE]
+[/center]
+
+[center][size=18pt][b]Что это даёт[/b][/size]
+[IMG WIDTH=225 HEIGHT=9]https://zahalski.dev/upload/awz.load.ai/lv1iyow5dj.png[/IMG][/center]
+[center]
+[TABLE]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/jhuuvdo7z4.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/4zhdkguvu3.png[/IMG][/TD][TD][b]Меньше расходов на поддержку:[/b] один портал вместо десятков копий под каждый регион[/TD][/TR]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/8embxprsdb.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/4zhdkguvu3.png[/IMG][/TD][TD][b]Выше позиции в регионах:[/b] региональные страницы с уникальными тегами и текстами продвигаются в своём городе[/TD][/TR]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/hxhhzw22jb.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/4zhdkguvu3.png[/IMG][/TD][TD][b]Без программиста:[/b] регионы, домены и данные настраиваются из админки[/TD][/TR]
+[/TABLE]
+[/center]
