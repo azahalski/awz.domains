@@ -87,6 +87,12 @@ if (preg_match('#^/(' . implode('|', array_map('preg_quote', $__awzCities)) . ')
 
         // /msk/ -> /, /msk/link/ -> /link/
         $__awzCleanPath = isset($m[2]) && $m[2] !== '' ? $m[2] : '/';
+        // запрещаем dot-segments, NUL и обратный слэш (path traversal)
+        if (strpos($__awzCleanPath, "\0") !== false
+            || strpos($__awzCleanPath, '\\') !== false
+            || preg_match('#(?:^|/)\.{1,2}(?:/|$)#', $__awzCleanPath)) {
+            $__awzCleanPath = '/';
+        }
         $__awzQuery = isset($__awzParsed['query']) ? '?' . $__awzParsed['query'] : '';
         $__awzNewRequestUri = $__awzCleanPath . $__awzQuery;
 
@@ -109,14 +115,22 @@ if (preg_match('#^/(' . implode('|', array_map('preg_quote', $__awzCities)) . ')
 // поэтому после подмены физический файл подключаем напрямую и завершаемся
 if ($__awzDoRewrite) {
     $__awzDocRoot = rtrim($__awzRoot !== '' ? $__awzRoot : dirname($__awzCfgFile, 2), '/\\');
-    if (substr($__awzCleanPath, -1) === '/') {
-        if (is_file($__awzDocRoot . $__awzCleanPath . 'index.php')) {
-            $__awzIncludeFile = $__awzDocRoot . $__awzCleanPath . 'index.php';
-        }
-    } elseif (is_file($__awzDocRoot . $__awzCleanPath)) {
-        $__awzIncludeFile = $__awzDocRoot . $__awzCleanPath;
-    } elseif (is_file($__awzDocRoot . $__awzCleanPath . '/index.php')) {
-        $__awzIncludeFile = $__awzDocRoot . $__awzCleanPath . '/index.php';
+    $__awzTarget = substr($__awzCleanPath, -1) === '/'
+        ? $__awzDocRoot . $__awzCleanPath . 'index.php'
+        : $__awzDocRoot . $__awzCleanPath;
+    if (!is_file($__awzTarget)) {
+        $__awzTarget = $__awzDocRoot . $__awzCleanPath . '/index.php';
+    }
+    // жесткое ограничение DOCUMENT_ROOT (защита от path traversal)
+    $__awzRealDocRoot = realpath($__awzDocRoot);
+    $__awzReal = $__awzRealDocRoot !== false ? realpath($__awzTarget) : false;
+    if ($__awzReal !== false
+        && strpos($__awzReal, $__awzRealDocRoot . DIRECTORY_SEPARATOR) === 0
+        && substr($__awzReal, -4) === '.php') {
+        $__awzIncludeFile = $__awzReal;
+        $__awzDocRoot = $__awzRealDocRoot;
+    } else {
+        unset($__awzIncludeFile);
     }
     if (isset($__awzIncludeFile)) {
         $__awzScriptName = str_replace('\\', '/', substr($__awzIncludeFile, strlen($__awzDocRoot)));
