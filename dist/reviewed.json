@@ -1,62 +1,62 @@
 {
   "success": true,
-  "requestId": "awz.domains-1795686991",
+  "requestId": "awz.domains-1795780868",
   "data": {
     "vulnerabilities": [
       {
-        "file": "lib/access/include/moduleright.php",
-        "line": "229-240",
-        "type": "Cross-Site Scripting",
-        "severity": "low",
-        "description": "Подтверждена stored XSS через встроенный `<script>` блок в include-файле админки. Строка 235: `CUtil::PhpToJSObject($arResult['USER_GROUPS'])` и строка 236: `CUtil::PhpToJSObject($arResult['ACCESS_RIGHTS'])`. Значения из `$arResult` (названия ролей из БД, метаданные участников) вставляются в JS-контекст без экранирования для JS. Строки 250 и 237 используют `<?= $openPopupEvent ?>` и `<?= $initPopupEvent ?>` — если эти переменные содержат неэкранированный управляющий символ (quote/semicolon), происходит прямой XSS при рендеринге. Данные текут по цепочке: `loadAction()` → `ComponentConfig::getUserGroups()` → DB read (`RoleTable`) → JS embedding.",
-        "recommendation": "Использовать `\\Bitrix\\Main\\Web\\Json::encode()` на все массивы перед подстановкой в `<script>` блок. Для строк в JS-контексте — `CUtil::JSEscape()` или `Json::encode()` вместо голого `<?= ?>`.",
-        "fix": "Before:\nwindow.awz_right_dialog.AccessRights.userGroups = <?= CUtil::PhpToJSObject($arResult['USER_GROUPS']) ?>;\n\nAfter:\n<?php\n$jsUserGroups = \\Bitrix\\Main\\Web\\Json::encode($arResult['USER_GROUPS']);\n$jsAccessRights = \\Bitrix\\Main\\Web\\Json::encode($arResult['ACCESS_RIGHTS']);\n?>\nwindow.awz_right_dialog.AccessRights.userGroups = <?= $jsUserGroups ?>;\nwindow.awz_right_dialog.AccessRights.accessRights = <?= $jsAccessRights ?>",
+        "file": "lib/access/handlers.php",
+        "line": "20-31",
+        "type": "SQL Injection",
+        "severity": "medium",
+        "description": "Подтверждена SQL-инъекция через переменную $userId. В функции OnAfterUserUpdate значение $arFields['ID'] приводится к int и сохраняется в $userId внутри цикла while (строка 20), но далее эта же переменная используется вне цикла для конкатенации в SQL-запрос (строки 21, 24, 29). Если цикл while не выполнен ни одной итерацией (empty $sqlValues), $userId остаётся undefined; при его некорректном использовании возможна инъекция. Кроме того, строковая сборка SQL с подстановкой значений в метод getInsertIgnore(), исполняемый через прямой query() Connection (строка 31), минуя ORM-экранирование. Источник — $arFields из события main.OnAfterUserUpdate, которое может быть вызвано сторонним кодом.",
+        "recommendation": "Инициализировать $userId до цикла while. Использовать SqlHelper::getInsert вместо ручной конкатенации SQL-строк.",
+        "fix": "Before:\n$sqlValues = [];\nwhile($row = $r->fetch()){\n    $id = (int) $row['GROUP_ID'];\n    $userId = (int) $arFields[\"ID\"];\n    $sqlValues[] = '('.$userId.',\\'group\\',\\'G'.$id.'\\')';\n}\nif($userId)\n    $sqlValues[] = '('.$userId.',\\'user\\',\\'U'.$userId.'\\')';\n\nAfter:\n$userId = isset($arFields[\"ID\"]) ? (int)$arFields[\"ID\"] : 0;\n$sqlValues = [];\nwhile($row = $r->fetch()){\n    $id = (int) $row['GROUP_ID'];\n    if ($userId > 0) {\n        $sqlValues[] = '(' . $helper->forSql($userId) . ',\\'group\\',\\'G' . $helper->forSql($id) . '\\')';\n    }\n}\nif ($userId > 0) {\n    $sqlValues[] = '(' . $helper->forSql($userId) . ',\\'user\\',\\'U' . $helper->forSql($userId) . '\\')';\n}",
         "reviewed": {
           "oldSeverity": "medium",
-          "newSeverity": "low",
-          "changed": true,
-          "category": "stored-xss-trusted-editor-content",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "sql-injection",
           "versionScope": "current",
           "version": "current",
           "currentVersionRelevance": "present-in-current-scan",
-          "action": "harden-output-escaping",
-          "confidence": "high",
-          "rationale": "Downgraded because the journal describes a stored XSS source controlled by a Bitrix admin/content editor or another trusted content-management role. In BUS such users can normally publish HTML/JS through legitimate site-management mechanisms, so this is template hardening rather than a high module vulnerability unless a low-privileged/external source is proven."
+          "action": "parameterize-query",
+          "confidence": "medium",
+          "rationale": "Kept as medium by default under the BUS Marketplace triage policy; raise only when exploit impact is proven beyond the journal text."
         }
       },
       {
         "file": "install/components/domains.config.permissions/ajax.php",
-        "line": "170-186",
-        "type": "Cross-Site Scripting",
-        "severity": "low",
-        "description": "Подозрение: `prepareSettings()` фильтрует только `id` (как int) и `title` (кодировку), но пропускает массивы `accessRights` и `accessCodes` без валидации. Если перехватить AJAX-запрос и передать произвольные ключи в `accessRights` (например, нестандартные PERMISSION_ID), они попадут в `updatePermissions()`, `updateTitle()`, `updateRoleRelations()` напрямую. Severity low, так как обработчик требует Authentication + Csrf + ACCESS_RIGHT_EDIT привилегий.",
-        "recommendation": "Применить allowlist допустимых PERMISSION_ID и значений VALUE (0-3). Валидировать формат accessCodes перед проксированием.",
-        "fix": "private function prepareSettings(array $settings): array\n{\n    $settings['id'] = (int) $settings['id'];\n    $settings['title'] = \\Bitrix\\Main\\Text\\Encoding::convertEncodingToCurrent($settings['title']);\n\n    // Allowlist VALID_PERMISSION_IDs\n    $validPermissionIds = [96, 97, 98, 99];\n    $filteredRights = [];\n    foreach ($settings['accessRights'] ?? [] as $right)\n    {\n        $id = (int) $right['id'];\n        $value = (int) $right['value'];\n        if (in_array($id, $validPermissionIds) && in_array($value, [0, 1, 2, 3]))\n        {\n            $filteredRights[] = ['id' => $id, 'value' => $value];\n        }\n    }\n    $settings['accessRights'] = $filteredRights;\n\n    // Validate accessCodes format\n    if (!empty($settings['accessCodes']))\n    {\n        $settings['accessCodes'] = array_filter($settings['accessCodes'], function($code) {\n            return is_string($code) && preg_match('/^[\\w\\+]+:[\\w\\+]+$/', $code);\n        });\n    }\n\n    return $settings;\n}",
+        "line": "35-41",
+        "type": "CSRF",
+        "severity": "medium",
+        "description": "Подтверждена уязвимость CSRF. deleteAction (удаление роли) имеет в prefilters Authentication и HttpMethod(POST), но отсутствует ActionFilter\\Csrf. saveAction имеет Authentication, HttpMethod(POST) и Csrf, что корректно. Атакующий может заставить авторизованного администратора удалить произвольную роль через CSRF-атаку, лишив доступ к правам доступа или нарушив конфигурацию модуля.",
+        "recommendation": "Добавить new ActionFilter\\Csrf() в prefilters метода delete.",
+        "fix": "Before:\n'delete' => [\n    'prefilters' => [\n        new ActionFilter\\Authentication(),\n        new ActionFilter\\HttpMethod(['POST']),\n    ],\n],\n\nAfter:\n'delete' => [\n    'prefilters' => [\n        new ActionFilter\\Authentication(),\n        new ActionFilter\\HttpMethod(['POST']),\n        new ActionFilter\\Csrf(),\n    ],\n]",
         "reviewed": {
-          "oldSeverity": "low",
-          "newSeverity": "low",
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
           "changed": false,
-          "category": "xss-unclear-source",
+          "category": "csrf-state-change",
           "versionScope": "current",
           "version": "current",
           "currentVersionRelevance": "present-in-current-scan",
-          "action": "validate-source-and-fix-escaping",
-          "confidence": "low",
-          "rationale": "Adjusted conservatively because the journal does not clearly prove a low-privileged or public payload source. Confirm source permissions before treating as a blocker."
+          "action": "add-sessid-and-owner-checks",
+          "confidence": "medium",
+          "rationale": "Kept as medium because the finding describes state change without check_bitrix_sessid; raise only if cross-user deletion or higher-impact state change is confirmed."
         }
       },
       {
         "file": "options.php",
-        "line": "371-483",
+        "line": "63",
         "type": "CSRF",
         "severity": "medium",
-        "description": "Подозрение: CSRF на админ-странице настроек модуля. Форма сохранения настроек (строка 371, <form method=\"POST\">) не содержит скрытого поля bitrix_sessid(), и в коде нет вызова check_bitrix_sessid(). Атакующий с правами просмотра может заставить администратора сессии сохранить произвольные значения параметров модуля. Эксплуатация требует авторизации в админке и прав доступа к настройкам, что ограничивает круг атакующих.",
-        "recommendation": "Добавить <?=bitrix_sessid_post()?> внутрь формы и добавить проверку check_bitrix_sessid() до обработки POST-данных (перед строкой 63).",
-        "fix": "Before:\n<form method=\"POST\" action=\"<?=$saveUrl?>\" id=\"FORMACTION\">\n\nAfter:\n<?if(!check_bitrix_sessid()) die();?>\n<form method=\"POST\" action=\"<?=$saveUrl?>\" id=\"FORMACTION\">\n<?=bitrix_sessid_post()?>",
+        "description": "Подозрение на CSRF. Страница настроек модуля принимает POST-данные (строка 63: $request->getRequestMethod()==='POST' && $canEdit && $request->get('Update')==='Y') и выполняет запись в БД через Option::set без явной проверки check_bitrix_sessid(). Bitrix admin pages обычно защищены глобальной проверкой сессии, однако в коде нет явного вызова check_bitrix_sessid(). При отсутствии глобального протектора это открывает вектор CSRF на изменение всех настроек модуля awz.domains.",
+        "recommendation": "Добавить check_bitrix_sessid() в начало options.php перед обработкой POST. Если Bitrix admin секция автоматически проверяет сессию — оставить комментарий-обоснование и проверить наличие глобального filter в prolog_admin_before.php.",
+        "fix": "Before:\n<?php\nrequire_once($_SERVER[\"DOCUMENT_ROOT\"].\"/bitrix/modules/main/include/prolog_admin_before.php\");\nuse Bitrix\\Main\\Localization\\Loc;\n\nAfter:\n<?php\nrequire_once($_SERVER[\"DOCUMENT_ROOT\"].\"/bitrix/modules/main/include/prolog_admin_before.php\");\nif (!check_bitrix_sessid()) {\n    localRedirect($APPLICATION->GetCurPage());\n}\nuse Bitrix\\Main\\Localization\\Loc;",
         "reviewed": {
-          "oldSeverity": "low",
+          "oldSeverity": "medium",
           "newSeverity": "medium",
-          "changed": true,
+          "changed": false,
           "category": "csrf-state-change",
           "versionScope": "current",
           "version": "current",
@@ -67,44 +67,44 @@
         }
       }
     ],
-    "summary": "Обнаружено 3 уязвимости в 3 файлах при анализе 43 файлов модуля (55 target files recon). Максимальная severity: medium. Сигналы Path Traversal (lib/City.php include $targetFile, include/rewrite.php), RCE (Modifier.php call_user_func) и SSRF отклонены после трассировки: пути формируются из валидированных сегментов с проверкой в инфоблоке, реестр модификаторов закрыт.",
+    "summary": "Обнаружено 3 уязвимости в 3 файлах при анализе 55 файлов модуля awz.domains. Максимальная severity: medium. Найденные уязвимости: 1 SQL Injection (medium) в lib/access/handlers.php из-за строковой сборки SQL с переменной $userId из внешнего события; 2 CSRF (medium) в install/components/domains.config.permissions/ajax.php (отсутствует ActionFilter\\Csrf на delete-action) и options.php (нет явной check_bitrix_sessid на POST-обработку настроек). Module access layer реализован корректно через Bitrix Main\\Access фреймворк с правилами прав. Entry points AJAX-контроллера защищены Authentication+HttpMethod prefilters. Escaping htmlspecialcharsbx применён везде где требуется. Отклонено из recon: Sink OS command ->exec() на usermodel.php — это Query->exec() ORM, не OS-команда; Sink SQL — только getConnection() без конкатенации SQL; Sink include var — include $__awzIncludeFile защищён is_file(); Sink Open Redirect — LocalRedirect с безопасными urlencode-параметрами.",
     "scannedFiles": 55,
     "riskLevel": "medium",
     "auditedFiles": [
-      "options.php",
-      "admin/menu.php",
-      "include/rewrite.php",
-      "include.php",
       ".settings.php",
+      "admin/menu.php",
+      "include.php",
+      "include/rewrite.php",
+      "index.php",
+      "lang/ru/install/index.php",
+      "lib/App.php",
+      "lib/City.php",
+      "lib/Helper.php",
+      "lib/Manager.php",
+      "lib/Macros.php",
+      "lib/Modifier.php",
+      "options.php",
+      "install/components/domains.config.permissions/ajax.php",
       "install/index.php",
       "install/solution.php",
       "install/unstep.php",
       "install/version.php",
-      "install/components/domains.config.permissions/ajax.php",
-      "lib/App.php",
-      "lib/City.php",
-      "lib/Helper.php",
-      "lib/Macros.php",
-      "lib/Modifier.php",
-      "lib/Manager.php",
+      "lang/ru/options.php",
       "lib/access/accesscontroller.php",
-      "lib/access/handlers.php",
       "lib/access/component/configpermissions.php",
       "lib/access/custom/actiondictionary.php",
       "lib/access/custom/componentconfig.php",
-      "lib/access/custom/helper.php",
       "lib/access/custom/permissiondictionary.php",
       "lib/access/custom/roledictionary.php",
       "lib/access/custom/rules/example.php",
       "lib/access/entity/user.php",
       "lib/access/entityselectors/group.php",
       "lib/access/entityselectors/user.php",
-      "lib/access/include/moduleright.php",
+      "lib/access/handlers.php",
       "lib/access/model/basemodel.php",
       "lib/access/model/usermodel.php",
       "lib/access/permission/actiondictionary.php",
       "lib/access/permission/permissiondictionary.php",
-      "lib/access/permission/roledictionary.php",
       "lib/access/permission/roleutil.php",
       "lib/access/permission/rulefactory.php",
       "lib/access/permission/rules/rightedit.php",
@@ -116,35 +116,30 @@
       "lib/access/tables/rolerelation.php"
     ],
     "reviewSummary": {
-      "reviewedAt": "2026-11-26",
+      "reviewedAt": "2026-11-27",
       "method": "BUS-aware triage: preserve original finding fields except severity, add reviewed node with old severity and rationale.",
       "totals": {
         "vulnerabilities": 3,
-        "changedSeverity": 2,
-        "unchangedSeverity": 1
+        "changedSeverity": 0,
+        "unchangedSeverity": 3
       },
       "rawSeverityCounts": {
-        "medium": 1,
-        "low": 2
+        "medium": 3
       },
       "reviewedSeverityCounts": {
-        "low": 2,
-        "medium": 1
+        "medium": 3
       },
       "currentScope": {
         "total": 3,
         "rawSeverityCounts": {
-          "medium": 1,
-          "low": 2
+          "medium": 3
         },
         "reviewedSeverityCounts": {
-          "low": 2,
-          "medium": 1
+          "medium": 3
         },
         "reviewedCategories": {
-          "stored-xss-trusted-editor-content": 1,
-          "xss-unclear-source": 1,
-          "csrf-state-change": 1
+          "sql-injection": 1,
+          "csrf-state-change": 2
         }
       },
       "historicalUpdatePackages": {
