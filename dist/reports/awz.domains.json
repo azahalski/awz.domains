@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "requestId": "awz.domains-1795785438",
+  "data": {
+    "vulnerabilities": [],
+    "summary": "Обнаружено 0 уязвимостей в 0 файлах при анализе 55 файлов модуля awz.domains. Максимальная severity: none. Модуль использует безопасные паттерны: все входные точки экранированы htmlspecialcharsbx, контроллер domains.config.permissions/ajax.php имеет полный стек prefilters (Authentication + HttpMethod(POST) + Csrf), запросы к БД выполняются через ORM Bitrix\\Main\\Entity\\Result (безопасны) или CDatabase::RunSQLBatch с фиксированными SQL-файлами. Отклоненные сигналы реконфига: (1) Open Redirect signal на options.php:161 -- LocalRedirect($saveUrl.$resParams) не является уязвимостью; URL собирается из GetCurPage + htmlspecialcharsbx/$module_id/LANGUAGE_ID и константный параметр SAVED=Y с urlencode()-обвернутым внутренним сообщением об ошибке; LocalRedirect в Bitrix по умолчанию блокирует scheme-relative URL (//, javascript:). (2) Sink SQL на lib/access/handlers.php:15 и install/index.php:86/102 -- это получение Connection объекта и вызов ORM->exec()/RunSQLBatch; строки SQL формируются через SqlHelper::getInsertIgnore() или загружаются из фиксированных файлов access.sql/unaccess.sql, пользовательский ввод в запросы не попадает. (3) Sink OS command на lib/access/model/usermodel.php:25,59 -- exec() вызывается на объекте ORM Bitrix\\Main\\Entity\\Result, а не на системной оболочке; это финализация ORM-запроса, а не OS command execution.",
+    "scannedFiles": 55,
+    "riskLevel": "none",
+    "auditedFiles": [
+      "install/components/domains.config.permissions/ajax.php",
+      "lib/access/model/usermodel.php",
+      "options.php",
+      "include/rewrite.php",
+      "lib/App.php",
+      "lib/City.php",
+      "lib/Helper.php",
+      "lib/Manager.php",
+      "lib/Modifier.php",
+      "lib/Macros.php",
+      "lib/access/accesscontroller.php",
+      "lib/access/handlers.php",
+      "lib/access/custom/actiondictionary.php",
+      "lib/access/custom/componentconfig.php",
+      "lib/access/custom/helper.php",
+      "lib/access/custom/permissiondictionary.php",
+      "lib/access/custom/roledictionary.php",
+      "lib/access/model/basemodel.php",
+      "lib/access/model/usermodel.php",
+      "lib/access/permission/permissiondictionary.php",
+      "lib/access/permission/actiondictionary.php",
+      "lib/access/permission/roleutil.php",
+      "lib/access/permission/rulefactory.php",
+      "lib/access/component/configpermissions.php",
+      "install/index.php",
+      "include.php",
+      "admin/menu.php",
+      "install/unstep.php"
+    ]
+  }
+}
